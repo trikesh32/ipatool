@@ -283,6 +283,11 @@ func (b *Backend) requestTransport(input emulator.Request) func(*http.Request) (
 	client := &http.Client{Transport: transport, Timeout: timeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 
 	return func(request *http.Request) (*http.Response, error) {
+		if input.Operation == "authenticate" {
+			if err := addNativeAuthenticationHeaders(request, platformAuthenticationHeaders); err != nil {
+				return nil, err
+			}
+		}
 		if b.jar != nil && request.Header.Get("Cookie") == "" {
 			for _, cookie := range b.jar.Cookies(request.URL) {
 				request.AddCookie(cookie)
