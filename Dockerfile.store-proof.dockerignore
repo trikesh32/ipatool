@@ -1,0 +1,7 @@
+.git
+bin
+exp
+**/*.ipa
+**/*.private.log
+**/device.json
+**/adi.pb

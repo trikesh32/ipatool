@@ -59,9 +59,10 @@ func (t *appstore) bag(guid string) (BagOutput, error) {
 		return BagOutput{}, fmt.Errorf("failed to parse authentication endpoint: %w", err)
 	}
 
-	// The bare path can return unusable responses, including a 301 without
-	// Location. Normalize only the validated bag URL, retaining its host and query.
-	authURL.Path = PrivateAppStoreAPIPathAuth + "/"
+	// Legacy endpoints need a trailing slash; native paths must remain as advertised.
+	if !strings.EqualFold(authURL.Hostname(), "auth.itunes.apple.com") {
+		authURL.Path = PrivateAppStoreAPIPathAuth + "/"
+	}
 	config.AuthEndpoint = authURL.String()
 
 	return BagOutput{AuthEndpoint: config.AuthEndpoint, SAPConfig: config}, nil
@@ -130,6 +131,14 @@ func validateAuthenticationEndpoint(endpoint string) error {
 	}
 
 	host := strings.ToLower(parsed.Hostname())
+	if host == "auth.itunes.apple.com" {
+		switch parsed.Path {
+		case "/auth/v1/native", "/auth/v1/native/", "/auth/v1/native/fast", "/auth/v1/native/fast/":
+			return nil
+		default:
+			return errors.New("unsupported authentication endpoint")
+		}
+	}
 	if host != PrivateAppStoreAPIDomain && !strings.HasSuffix(host, "-buy.itunes.apple.com") {
 		return errors.New("unsupported authentication endpoint")
 	}

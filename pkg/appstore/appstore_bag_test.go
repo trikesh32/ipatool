@@ -49,6 +49,9 @@ var _ = Describe("AppStore (Bag)", func() {
 		Entry("bare pod URL with routing query", "https://p7-buy.itunes.apple.com"+PrivateAppStoreAPIPathAuth+"?Pod=7&PRH=7", "https://p7-buy.itunes.apple.com"+PrivateAppStoreAPIPathAuth+"/?Pod=7&PRH=7"),
 		Entry("slashed pod URL with routing query", "https://p7-buy.itunes.apple.com"+PrivateAppStoreAPIPathAuth+"/?routing=opaque", "https://p7-buy.itunes.apple.com"+PrivateAppStoreAPIPathAuth+"/?routing=opaque"),
 		Entry("explicit HTTPS port", "https://buy.itunes.apple.com:443"+PrivateAppStoreAPIPathAuth, "https://buy.itunes.apple.com:443"+PrivateAppStoreAPIPathAuth+"/"),
+		Entry("native path advertised to Configurator 2.21", "https://auth.itunes.apple.com/auth/v1/native", "https://auth.itunes.apple.com/auth/v1/native"),
+		Entry("native fast path with routing query", "https://auth.itunes.apple.com/auth/v1/native/fast?Pod=7", "https://auth.itunes.apple.com/auth/v1/native/fast?Pod=7"),
+		Entry("native fast trailing slash", "https://auth.itunes.apple.com/auth/v1/native/fast/", "https://auth.itunes.apple.com/auth/v1/native/fast/"),
 	)
 
 	DescribeTable("rejects invalid authentication URLs before normalizing the path", func(endpoint string) {
@@ -69,6 +72,10 @@ var _ = Describe("AppStore (Bag)", func() {
 		Entry("unsupported port", "https://buy.itunes.apple.com:8443"+PrivateAppStoreAPIPathAuth),
 		Entry("fragment", testAuthEndpoint+"#fragment"),
 		Entry("malformed URL", testAuthEndpoint+"%zz"),
+		Entry("native path on foreign host", "https://auth.itunes.apple.com.example.com/auth/v1/native"),
+		Entry("native unknown path", "https://auth.itunes.apple.com/auth/v1/native/other"),
+		Entry("native encoded path", "https://auth.itunes.apple.com/auth/v1/native%2ffast"),
+		Entry("native insecure scheme", "http://auth.itunes.apple.com/auth/v1/native"),
 	)
 
 	When("fails to read machine MAC address", func() {

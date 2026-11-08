@@ -414,8 +414,9 @@ func (t *appstore) loginRequest(email, password, authCode, guid, endpoint string
 		URL:            endpoint,
 		ResponseFormat: http.ResponseFormatXML,
 		ActionSigner:   signer,
+		NoRedirects:    true,
 		Headers: map[string]string{
-			"Content-Type": "application/x-www-form-urlencoded",
+			"Content-Type": "application/x-apple-plist",
 		},
 		Payload: &http.XMLPayload{
 			Content: map[string]interface{}{

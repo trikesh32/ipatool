@@ -167,7 +167,7 @@ func (b *Backend) execute(ctx context.Context, input emulator.Request) (*http.Re
 		input.Headers.Set("User-Agent", apphttp.DefaultUserAgent)
 
 		if input.Operation == "purchase" {
-			input.Headers.Set("User-Agent", "Configurator/2.18 (Macintosh; OS X 15.3.2; 24D81) AppleWebKit/0620.2.4.11.6")
+			input.Headers.Set("User-Agent", apphttp.CommerceUserAgent)
 		}
 	}
 
@@ -283,15 +283,44 @@ func (b *Backend) requestTransport(input emulator.Request) func(*http.Request) (
 	client := &http.Client{Transport: transport, Timeout: timeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 
 	return func(request *http.Request) (*http.Response, error) {
+		proofOperation := input.Operation == "authenticate" || input.Operation == "request" || input.Operation == "purchase"
+		if proofOperation {
+			provider := platformAuthenticationHeaders
+			if externalStoreProofEnabled() {
+				provider = func(string) (map[string]string, error) { return externalStoreProofContext(request.Context()) }
+			}
+
+			if err := addNativeAuthenticationHeaders(request, provider); err != nil {
+				return nil, err
+			}
+		}
 		if b.jar != nil && request.Header.Get("Cookie") == "" {
 			for _, cookie := range b.jar.Cookies(request.URL) {
 				request.AddCookie(cookie)
 			}
 		}
 
-		response, err := client.Do(request)
-		if err == nil && b.jar != nil {
-			b.jar.SetCookies(request.URL, response.Cookies())
+		send := func(req *http.Request) (*http.Response, error) {
+			res, err := client.Do(req)
+			if err != nil {
+				return res, fmt.Errorf("send Store request: %w", err)
+			}
+
+			if b.jar != nil {
+				b.jar.SetCookies(req.URL, res.Cookies())
+			}
+
+			return res, nil
+		}
+
+		var response *http.Response
+
+		var err error
+
+		if proofOperation && externalStoreProofEnabled() {
+			response, err = sendWithStoreProvisioning(request, hex.EncodeToString(input.HardwareID), send, provisionExternalStoreProof)
+		} else {
+			response, err = send(request)
 		}
 
 		if err != nil {
