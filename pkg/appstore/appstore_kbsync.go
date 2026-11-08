@@ -118,7 +118,7 @@ func (t *appstore) sendEntDownloadRequest(ctx context.Context, endpoint download
 	// X-Token must not be forwarded to redirect destinations.
 	request.NoRedirects = true
 	request.Headers["Content-Type"] = "application/x-www-form-urlencoded; charset=utf-8"
-	request.Headers["User-Agent"] = "Configurator/2.18 (Macintosh; OS X 15.3.2; 24D81) AppleWebKit/0620.2.4.11.6"
+	request.Headers["User-Agent"] = http.CommerceUserAgent
 	request.Headers["X-Apple-Store-Front"] = acc.StoreFront
 	request.Headers["X-Token"] = acc.PasswordToken
 	request.Payload = &http.XMLPayload{Content: map[string]interface{}{

@@ -277,15 +277,27 @@ func (*appstore) downloadProductRequest(endpoint downloadProductEndpoint, acc Ac
 		payload[endpoint.versionKey] = externalVersionID
 	}
 
+	headers := map[string]string{
+		"Content-Type": "application/x-apple-plist",
+		"iCloud-DSID":  acc.DirectoryServicesID,
+		"X-Dsid":       acc.DirectoryServicesID,
+	}
+	// The framework reconstructs its account from these headers. A DSID alone
+	// loses both the authenticated Store token and the storefront after login.
+	if acc.PasswordToken != "" {
+		headers["X-Token"] = acc.PasswordToken
+	}
+
+	if acc.StoreFront != "" {
+		headers["X-Apple-Store-Front"] = acc.StoreFront
+	}
+
 	return http.Request{
 		URL:            fmt.Sprintf("%s?guid=%s", endpoint.baseURL, guid),
 		Method:         http.MethodPOST,
 		ResponseFormat: http.ResponseFormatXML,
-		Headers: map[string]string{
-			"Content-Type": "application/x-apple-plist",
-			"iCloud-DSID":  acc.DirectoryServicesID,
-			"X-Dsid":       acc.DirectoryServicesID,
-		},
+		NoRedirects:    true,
+		Headers:        headers,
 		Payload: &http.XMLPayload{
 			Content: payload,
 		},

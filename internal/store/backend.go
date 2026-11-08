@@ -167,7 +167,7 @@ func (b *Backend) execute(ctx context.Context, input emulator.Request) (*http.Re
 		input.Headers.Set("User-Agent", apphttp.DefaultUserAgent)
 
 		if input.Operation == "purchase" {
-			input.Headers.Set("User-Agent", "Configurator/2.18 (Macintosh; OS X 15.3.2; 24D81) AppleWebKit/0620.2.4.11.6")
+			input.Headers.Set("User-Agent", apphttp.CommerceUserAgent)
 		}
 	}
 
@@ -283,7 +283,7 @@ func (b *Backend) requestTransport(input emulator.Request) func(*http.Request) (
 	client := &http.Client{Transport: transport, Timeout: timeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 
 	return func(request *http.Request) (*http.Response, error) {
-		if input.Operation == "authenticate" {
+		if input.Operation == "authenticate" || input.Operation == "request" || input.Operation == "purchase" {
 			if err := addNativeAuthenticationHeaders(request, platformAuthenticationHeaders); err != nil {
 				return nil, err
 			}
