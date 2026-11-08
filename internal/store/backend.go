@@ -283,8 +283,14 @@ func (b *Backend) requestTransport(input emulator.Request) func(*http.Request) (
 	client := &http.Client{Transport: transport, Timeout: timeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 
 	return func(request *http.Request) (*http.Response, error) {
-		if input.Operation == "authenticate" || input.Operation == "request" || input.Operation == "purchase" {
-			if err := addNativeAuthenticationHeaders(request, platformAuthenticationHeaders); err != nil {
+		proofOperation := input.Operation == "authenticate" || input.Operation == "request" || input.Operation == "purchase"
+		if proofOperation {
+			provider := platformAuthenticationHeaders
+			if externalStoreProofEnabled() {
+				provider = func(string) (map[string]string, error) { return externalStoreProofContext(request.Context()) }
+			}
+
+			if err := addNativeAuthenticationHeaders(request, provider); err != nil {
 				return nil, err
 			}
 		}
@@ -294,9 +300,27 @@ func (b *Backend) requestTransport(input emulator.Request) func(*http.Request) (
 			}
 		}
 
-		response, err := client.Do(request)
-		if err == nil && b.jar != nil {
-			b.jar.SetCookies(request.URL, response.Cookies())
+		send := func(req *http.Request) (*http.Response, error) {
+			res, err := client.Do(req)
+			if err != nil {
+				return res, fmt.Errorf("send Store request: %w", err)
+			}
+
+			if b.jar != nil {
+				b.jar.SetCookies(req.URL, res.Cookies())
+			}
+
+			return res, nil
+		}
+
+		var response *http.Response
+
+		var err error
+
+		if proofOperation && externalStoreProofEnabled() {
+			response, err = sendWithStoreProvisioning(request, hex.EncodeToString(input.HardwareID), send, provisionExternalStoreProof)
+		} else {
+			response, err = send(request)
 		}
 
 		if err != nil {

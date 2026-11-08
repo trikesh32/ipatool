@@ -9,28 +9,39 @@ import (
 
 // Device proofs belong only to native authentication and known commerce API origins.
 func addNativeAuthenticationHeaders(request *http.Request, provider func(string) (map[string]string, error)) error {
+	if !needsStoreProof(request) {
+		return nil
+	}
+
+	return applyNativeHeaders(request, provider)
+}
+
+func needsStoreProof(request *http.Request) bool {
+	if request == nil || request.URL == nil {
+		return false
+	}
 	u := request.URL
 
 	if request.Method != http.MethodPost {
-		return nil
+		return false
 	}
 
 	if isNativeDownloadURL(u) || isNativePurchaseURL(u) {
-		return applyNativeHeaders(request, provider)
+		return true
 	}
 
 	if u.Scheme != "https" || !strings.EqualFold(u.Hostname(), "auth.itunes.apple.com") ||
-		u.User != nil || u.Fragment != "" || u.RawPath != "" || (u.Port() != "" && u.Port() != "443") {
-		return nil
+		u.User != nil || u.Opaque != "" || u.Fragment != "" || u.RawPath != "" || (u.Port() != "" && u.Port() != "443") {
+		return false
 	}
 
 	switch u.Path {
 	case "/auth/v1/native", "/auth/v1/native/", "/auth/v1/native/fast", "/auth/v1/native/fast/":
 	default:
-		return nil
+		return false
 	}
 
-	return applyNativeHeaders(request, provider)
+	return true
 }
 
 func isNativePurchaseURL(value *url.URL) bool {

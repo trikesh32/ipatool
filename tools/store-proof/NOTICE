@@ -1,0 +1,23 @@
+ipatool-store-proof is a separate Linux executable. Its source is distributed
+under the GNU Library General Public License version 2; see COPYING-LGPLv2.
+
+internal/adi and internal/androidlib were adapted from:
+  https://github.com/hpidcock/ap
+  commit e690795d17446ddabe348f890c130a2280900430
+  internal/anisette/local/{adi,androidlib}
+
+Those packages are a Go port of the ADI wrapper and Android library loader from:
+  https://github.com/Dadoum/Provision
+  Copyright (c) 2023, Dadoum
+  GNU Library General Public License version 2
+
+Local modifications include the import path, provenance comments and the
+Store-specific command, provisioning protocol and verified library installer.
+The helper uses machine scope -1 and Apple's Store provisioning endpoint.
+It does not use the AuthKit/GrandSlam provisioning workflow (scope -2).
+
+Apple libraries are not included. Setup extracts verified libraries from
+Apple's public Apple Music APK. They remain Apple's proprietary software.
+
+The main ipatool executable remains a separate program and communicates with
+this helper through bounded JSON on stdin/stdout; it does not link these packages.
